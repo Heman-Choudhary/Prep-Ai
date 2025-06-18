@@ -1,346 +1,326 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  TrendingUp, 
+  Plus, 
   Clock, 
-  Target, 
+  TrendingUp, 
   Award, 
-  Calendar,
-  PlayCircle,
   BarChart3,
-  BookOpen,
-  Plus
+  Calendar,
+  Target,
+  Mic
 } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
-import { useInterview } from '../contexts/InterviewContext';
+import { supabase } from '../lib/supabase';
 
-const Dashboard: React.FC = () => {
+interface Interview {
+  id: string;
+  role: string;
+  experience_level: string;
+  interview_type: string;
+  score: number | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export function Dashboard() {
   const { user } = useAuth();
-  const { sessions } = useInterview();
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalInterviews: 0,
+    averageScore: 0,
+    recentScore: 0,
+    improvementTrend: 0
+  });
 
-  const recentSessions = sessions.slice(-3).reverse();
-  const completedSessions = sessions.filter(s => s.status === 'completed');
-  const averageScore = completedSessions.length > 0 
-    ? Math.round(completedSessions.reduce((acc, s) => acc + (s.score?.overall || 0), 0) / completedSessions.length)
-    : 0;
+  useEffect(() => {
+    if (user) {
+      fetchInterviews();
+    }
+  }, [user]);
 
-  const stats = [
-    {
-      label: 'Total Interviews',
-      value: sessions.length,
-      icon: <PlayCircle className="w-6 h-6" />,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-    },
-    {
-      label: 'Average Score',
-      value: `${averageScore}%`,
-      icon: <TrendingUp className="w-6 h-6" />,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-    },
-    {
-      label: 'Hours Practiced',
-      value: Math.round(sessions.reduce((acc, s) => {
-        if (s.startTime && s.endTime) {
-          return acc + (new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / (1000 * 60 * 60);
-        }
-        return acc;
-      }, 0)),
-      icon: <Clock className="w-6 h-6" />,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-    },
-    {
-      label: 'Success Rate',
-      value: `${completedSessions.length > 0 ? Math.round((completedSessions.filter(s => (s.score?.overall || 0) >= 80).length / completedSessions.length) * 100) : 0}%`,
-      icon: <Award className="w-6 h-6" />,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
-    },
-  ];
+  const fetchInterviews = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('interviews')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-  const upcomingTasks = [
-    {
-      title: 'Practice Technical Questions',
-      description: 'Focus on data structures and algorithms',
-      priority: 'high',
-      dueDate: 'Today',
-    },
-    {
-      title: 'Review Behavioral Responses',
-      description: 'Prepare STAR method examples',
-      priority: 'medium',
-      dueDate: 'Tomorrow',
-    },
-    {
-      title: 'Mock Interview Session',
-      description: 'Full-length practice interview',
-      priority: 'high',
-      dueDate: 'This Week',
-    },
-  ];
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low':
-        return 'text-green-600 bg-green-50 border-green-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+      if (error) {
+        console.error('Error fetching interviews:', error);
+      } else {
+        setInterviews(data || []);
+        calculateStats(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching interviews:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const calculateStats = (interviewData: Interview[]) => {
+    const completedInterviews = interviewData.filter(i => i.completed_at && i.score !== null);
+    
+    if (completedInterviews.length === 0) {
+      setStats({
+        totalInterviews: interviewData.length,
+        averageScore: 0,
+        recentScore: 0,
+        improvementTrend: 0
+      });
+      return;
+    }
+
+    const totalScore = completedInterviews.reduce((sum, i) => sum + (i.score || 0), 0);
+    const averageScore = Math.round(totalScore / completedInterviews.length);
+    const recentScore = completedInterviews[0]?.score || 0;
+    
+    // Calculate improvement trend (last 3 vs previous 3)
+    const recent3 = completedInterviews.slice(0, 3);
+    const previous3 = completedInterviews.slice(3, 6);
+    
+    let improvementTrend = 0;
+    if (recent3.length > 0 && previous3.length > 0) {
+      const recentAvg = recent3.reduce((sum, i) => sum + (i.score || 0), 0) / recent3.length;
+      const previousAvg = previous3.reduce((sum, i) => sum + (i.score || 0), 0) / previous3.length;
+      improvementTrend = Math.round(recentAvg - previousAvg);
+    }
+
+    setStats({
+      totalInterviews: interviewData.length,
+      averageScore,
+      recentScore,
+      improvementTrend
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getScoreColor = (score: number | null) => {
+    if (!score) return 'text-gray-400';
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getScoreBadgeColor = (score: number | null) => {
+    if (!score) return 'bg-gray-100 text-gray-600';
+    if (score >= 80) return 'bg-green-100 text-green-700';
+    if (score >= 60) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-red-100 text-red-700';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {user?.name}!
+            Welcome back, {user?.user_metadata?.full_name || 'Candidate'}!
           </h1>
           <p className="text-gray-600 mt-2">
-            Track your progress and continue improving your interview skills
+            Ready to practice and improve your interview skills?
           </p>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                </div>
-                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                  <div className={stat.color}>{stat.icon}</div>
-                </div>
+          <Card>
+            <div className="flex items-center">
+              <div className="bg-blue-100 p-3 rounded-lg mr-4">
+                <Target className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Interviews</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalInterviews}</p>
               </div>
             </div>
-          ))}
+          </Card>
+
+          <Card>
+            <div className="flex items-center">
+              <div className="bg-emerald-100 p-3 rounded-lg mr-4">
+                <BarChart3 className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Average Score</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.averageScore}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex items-center">
+              <div className="bg-purple-100 p-3 rounded-lg mr-4">
+                <Award className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Recent Score</p>
+                <p className={`text-2xl font-bold ${getScoreColor(stats.recentScore)}`}>
+                  {stats.recentScore || 'N/A'}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex items-center">
+              <div className="bg-orange-100 p-3 rounded-lg mr-4">
+                <TrendingUp className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Improvement</p>
+                <p className={`text-2xl font-bold ${stats.improvementTrend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {stats.improvementTrend > 0 ? '+' : ''}{stats.improvementTrend}
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Quick Actions */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Link
-                  to="/interview/setup"
-                  className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all group"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                      <PlayCircle className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Start New Interview</h3>
-                      <p className="text-sm text-gray-600">Practice with AI interviewer</p>
-                    </div>
-                  </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Start New Interview */}
+          <div className="lg:col-span-1">
+            <Card>
+              <div className="text-center">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Mic className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  Start New Interview
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Practice with our AI interviewer and improve your skills
+                </p>
+                <Link to="/interview/setup">
+                  <Button className="w-full" size="lg">
+                    <Plus className="h-5 w-5 mr-2" />
+                    Start Practice
+                  </Button>
                 </Link>
-                
-                <div className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-md transition-all group cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
-                      <BarChart3 className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">View Analytics</h3>
-                      <p className="text-sm text-gray-600">Detailed performance insights</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-md transition-all group cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
-                      <BookOpen className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Study Resources</h3>
-                      <p className="text-sm text-gray-600">Interview preparation materials</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 border border-gray-200 rounded-lg hover:border-yellow-300 hover:shadow-md transition-all group cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-yellow-50 rounded-lg group-hover:bg-yellow-100 transition-colors">
-                      <Calendar className="w-6 h-6 text-yellow-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Schedule Session</h3>
-                      <p className="text-sm text-gray-600">Book practice time</p>
-                    </div>
-                  </div>
-                </div>
               </div>
-            </div>
+            </Card>
+          </div>
 
-            {/* Recent Sessions */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Recent Sessions</h2>
-                <Link
-                  to="/interview/setup"
-                  className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  New Session
+          {/* Recent Interviews */}
+          <div className="lg:col-span-2">
+            <Card>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Recent Interviews</h3>
+                <Link to="/interviews" className="text-blue-600 hover:text-blue-700 text-sm">
+                  View all
                 </Link>
               </div>
-              
-              {recentSessions.length > 0 ? (
+
+              {interviews.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">No interviews yet</p>
+                  <Link to="/interview/setup">
+                    <Button variant="outline">
+                      Start your first interview
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
                 <div className="space-y-4">
-                  {recentSessions.map((session) => (
-                    <div key={session.id} className="p-4 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex-1">
-                              <h3 className="font-medium text-gray-900">
-                                {session.config.role} - {session.config.interviewType}
-                              </h3>
-                              <p className="text-sm text-gray-600">
-                                {session.config.experienceLevel} level • {session.config.difficulty} difficulty
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(session.startTime).toLocaleDateString()} at{' '}
-                                {new Date(session.startTime).toLocaleTimeString([], { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
-                              </p>
+                  {interviews.slice(0, 5).map((interview) => (
+                    <div key={interview.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Target className="h-5 w-5 text-blue-600" />
                             </div>
                           </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {interview.role} - {interview.interview_type}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {formatDate(interview.created_at)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-4">
-                          {session.status === 'completed' && session.score && (
-                            <div className="text-right">
-                              <div className="text-lg font-semibold text-gray-900">
-                                {session.score.overall}%
-                              </div>
-                              <div className="text-xs text-gray-500">Overall Score</div>
-                            </div>
-                          )}
-                          {session.status === 'completed' ? (
-                            <Link
-                              to={`/results/${session.id}`}
-                              className="bg-blue-50 text-blue-600 px-3 py-1 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
-                            >
-                              View Results
-                            </Link>
-                          ) : (
-                            <span className="bg-yellow-50 text-yellow-600 px-3 py-1 rounded-md text-sm font-medium">
-                              In Progress
-                            </span>
-                          )}
-                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        {interview.completed_at ? (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreBadgeColor(interview.score)}`}>
+                            {interview.score}/100
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                            In Progress
+                          </span>
+                        )}
+                        <Clock className="h-4 w-4 text-gray-400" />
                       </div>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <PlayCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions yet</h3>
-                  <p className="text-gray-600 mb-4">Start your first AI interview practice session</p>
-                  <Link
-                    to="/interview/setup"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    Start Interview
-                  </Link>
-                </div>
               )}
-            </div>
+            </Card>
           </div>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Progress Overview */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Progress Overview</h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Interview Skills</span>
-                    <span className="text-sm text-gray-600">{averageScore}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${averageScore}%` }}
-                    ></div>
-                  </div>
+        {/* Tips Section */}
+        <div className="mt-8">
+          <Card>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Interview Tips</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Mic className="h-6 w-6 text-blue-600" />
                 </div>
-                
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Confidence Level</span>
-                    <span className="text-sm text-gray-600">
-                      {completedSessions.length > 0
-                        ? Math.round(completedSessions.reduce((acc, s) => acc + (s.score?.confidence || 0), 0) / completedSessions.length)
-                        : 0}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${completedSessions.length > 0
-                          ? Math.round(completedSessions.reduce((acc, s) => acc + (s.score?.confidence || 0), 0) / completedSessions.length)
-                          : 0}%` 
-                      }}
-                    ></div>
-                  </div>
+                <h4 className="font-medium text-gray-900 mb-2">Practice Regularly</h4>
+                <p className="text-sm text-gray-600">
+                  Consistent practice helps build confidence and improves your performance over time.
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Target className="h-6 w-6 text-purple-600" />
                 </div>
+                <h4 className="font-medium text-gray-900 mb-2">Focus on Weak Areas</h4>
+                <p className="text-sm text-gray-600">
+                  Use your performance analytics to identify and work on areas that need improvement.
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Award className="h-6 w-6 text-emerald-600" />
+                </div>
+                <h4 className="font-medium text-gray-900 mb-2">Stay Confident</h4>
+                <p className="text-sm text-gray-600">
+                  Remember that practice makes perfect. Each session brings you closer to success.
+                </p>
               </div>
             </div>
-
-            {/* Upcoming Tasks */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Upcoming Tasks</h2>
-              
-              <div className="space-y-3">
-                {upcomingTasks.map((task, index) => (
-                  <div key={index} className="p-3 border border-gray-200 rounded-lg">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 text-sm">{task.title}</h3>
-                        <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">{task.dueDate}</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Tips */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">💡 Today's Tip</h2>
-              <p className="text-sm text-gray-700">
-                Practice the STAR method (Situation, Task, Action, Result) for behavioral questions. 
-                This structure helps you give comprehensive and organized responses.
-              </p>
-            </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
   );
-};
-
-export default Dashboard;
+}
