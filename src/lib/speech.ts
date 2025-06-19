@@ -34,6 +34,78 @@ export class SpeechService {
     }
   }
 
+  private selectBestVoice(): SpeechSynthesisVoice | null {
+    if (this.voices.length === 0) return null;
+
+    // Priority order for more human-sounding voices
+    const preferredVoices = [
+      // Google voices (usually highest quality)
+      'Google US English',
+      'Google UK English Female',
+      'Google UK English Male',
+      
+      // Microsoft voices (good quality)
+      'Microsoft Zira Desktop',
+      'Microsoft David Desktop',
+      'Microsoft Hazel Desktop',
+      
+      // Apple voices (natural sounding)
+      'Samantha',
+      'Alex',
+      'Victoria',
+      'Karen',
+      'Moira',
+      
+      // Other high-quality voices
+      'Fiona',
+      'Daniel',
+      'Tessa'
+    ];
+
+    // First, try to find preferred voices by exact name match
+    for (const preferredName of preferredVoices) {
+      const voice = this.voices.find(v => v.name === preferredName);
+      if (voice) return voice;
+    }
+
+    // Then try to find voices that contain preferred names
+    for (const preferredName of preferredVoices) {
+      const voice = this.voices.find(v => v.name.toLowerCase().includes(preferredName.toLowerCase()));
+      if (voice) return voice;
+    }
+
+    // Look for any English female voice (generally more pleasant for interviews)
+    const femaleEnglishVoice = this.voices.find(voice => 
+      voice.lang.startsWith('en') && 
+      (voice.name.toLowerCase().includes('female') || 
+       voice.name.toLowerCase().includes('woman') ||
+       voice.name.toLowerCase().includes('zira') ||
+       voice.name.toLowerCase().includes('hazel') ||
+       voice.name.toLowerCase().includes('samantha') ||
+       voice.name.toLowerCase().includes('karen') ||
+       voice.name.toLowerCase().includes('fiona'))
+    );
+    
+    if (femaleEnglishVoice) return femaleEnglishVoice;
+
+    // Look for any high-quality English voice
+    const qualityEnglishVoice = this.voices.find(voice => 
+      voice.lang.startsWith('en') && 
+      (voice.name.toLowerCase().includes('google') ||
+       voice.name.toLowerCase().includes('microsoft') ||
+       voice.name.toLowerCase().includes('apple'))
+    );
+    
+    if (qualityEnglishVoice) return qualityEnglishVoice;
+
+    // Fallback to any English voice
+    const englishVoice = this.voices.find(voice => voice.lang.startsWith('en'));
+    if (englishVoice) return englishVoice;
+
+    // Last resort - use the first available voice
+    return this.voices[0] || null;
+  }
+
   speak(text: string, options: { rate?: number; pitch?: number; volume?: number } = {}): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!text) {
@@ -46,18 +118,16 @@ export class SpeechService {
 
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Find a suitable voice (prefer female English voices for professional tone)
-      const preferredVoice = this.voices.find(voice => 
-        voice.lang.startsWith('en') && voice.name.toLowerCase().includes('female')
-      ) || this.voices.find(voice => voice.lang.startsWith('en')) || this.voices[0];
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
+      // Select the best available voice
+      const selectedVoice = this.selectBestVoice();
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
       }
 
-      utterance.rate = options.rate || 0.9;
-      utterance.pitch = options.pitch || 1.0;
-      utterance.volume = options.volume || 0.8;
+      // Optimize settings for more natural speech
+      utterance.rate = options.rate || 0.85; // Slightly slower for clarity
+      utterance.pitch = options.pitch || 1.0; // Natural pitch
+      utterance.volume = options.volume || 0.9; // Clear but not overwhelming
 
       utterance.onend = () => resolve();
       utterance.onerror = (error) => reject(error);
@@ -128,5 +198,17 @@ export class SpeechService {
 
   isSpeechSupported(): boolean {
     return !!this.recognition && 'speechSynthesis' in window;
+  }
+
+  // Method to get available voices for debugging
+  getAvailableVoices(): SpeechSynthesisVoice[] {
+    return this.voices;
+  }
+
+  // Method to test voice selection
+  testVoice(): void {
+    const selectedVoice = this.selectBestVoice();
+    console.log('Selected voice:', selectedVoice?.name, selectedVoice?.lang);
+    console.log('Available voices:', this.voices.map(v => ({ name: v.name, lang: v.lang })));
   }
 }
