@@ -11,7 +11,9 @@ import {
   Send,
   Clock,
   User,
-  Bot
+  Bot,
+  Code,
+  Type
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -44,9 +46,11 @@ export function InterviewSession() {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [isEndingInterview, setIsEndingInterview] = useState(false);
+  const [inputMode, setInputMode] = useState<'text' | 'code'>('text');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     // Load config from sessionStorage
@@ -59,24 +63,30 @@ export function InterviewSession() {
       navigate('/interview/setup');
     }
 
-    // Test voice selection on component mount
+    // Initialize speech service with better voice selection
     setTimeout(() => {
-      speechService.testVoice();
+      speechService.initializeOptimalVoice();
     }, 1000);
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      // Stop any ongoing speech when component unmounts
-      speechService.stopSpeaking();
-      speechService.stopListening();
+      cleanup();
     };
   }, [navigate, speechService]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const cleanup = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    speechService.stopSpeaking();
+    speechService.stopListening();
+    setIsSpeaking(false);
+    setIsListening(false);
+  };
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
@@ -170,7 +180,7 @@ export function InterviewSession() {
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!interviewer || !content.trim()) return;
+    if (!interviewer || !content.trim() || isEndingInterview) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -196,7 +206,7 @@ export function InterviewSession() {
       setMessages(prev => [...prev, aiMessage]);
       
       // Speak the response if voice mode is enabled
-      if (config?.interactionMode === 'voice') {
+      if (config?.interactionMode === 'voice' && !isEndingInterview) {
         setIsSpeaking(true);
         try {
           await speechService.speak(aiResponse);
@@ -214,7 +224,7 @@ export function InterviewSession() {
   };
 
   const startListening = async () => {
-    if (!speechService.isSpeechSupported()) {
+    if (!speechService.isSpeechSupported() || isEndingInterview) {
       alert('Speech recognition is not supported in your browser');
       return;
     }
@@ -222,7 +232,9 @@ export function InterviewSession() {
     try {
       setIsListening(true);
       const transcript = await speechService.startListening();
-      setCurrentInput(transcript);
+      if (!isEndingInterview) {
+        setCurrentInput(transcript);
+      }
     } catch (error) {
       console.error('Error with speech recognition:', error);
     } finally {
@@ -243,41 +255,48 @@ export function InterviewSession() {
   };
 
   const endInterview = async () => {
-    if (!interviewer || !interviewId || isEndingInterview) return;
+    if (!interviewer || isEndingInterview) return;
 
+    console.log('Starting interview end process...');
     setIsEndingInterview(true);
     
-    // Stop all ongoing activities
-    stopTimer();
-    speechService.stopSpeaking();
-    speechService.stopListening();
-    setIsSpeaking(false);
-    setIsListening(false);
-
     try {
+      // Stop all ongoing activities immediately
+      cleanup();
+      
+      console.log('Generating feedback...');
       const feedback = await interviewer.generateFeedback();
       const interviewData = interviewer.getInterviewData();
 
-      // Update interview record with results
-      await supabase
-        .from('interviews')
-        .update({
-          score: feedback.overallScore,
-          feedback: feedback.feedback,
-          questions: interviewData.questions,
-          responses: interviewData.responses,
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', interviewId);
+      // Update interview record with results if we have an ID
+      if (interviewId) {
+        console.log('Updating interview record...');
+        const { error } = await supabase
+          .from('interviews')
+          .update({
+            score: feedback.overallScore,
+            feedback: feedback.feedback,
+            questions: interviewData.questions,
+            responses: interviewData.responses,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', interviewId);
+
+        if (error) {
+          console.error('Error updating interview record:', error);
+        }
+      }
 
       // Store feedback in sessionStorage for results page
       sessionStorage.setItem('interviewFeedback', JSON.stringify(feedback));
       sessionStorage.setItem('interviewMessages', JSON.stringify(messages));
       
+      console.log('Navigating to results...');
       navigate('/interview/results');
     } catch (error) {
       console.error('Error ending interview:', error);
-      // Even if there's an error, navigate to results with basic feedback
+      
+      // Provide basic feedback even if there's an error
       const basicFeedback = {
         overallScore: 75,
         breakdown: {
@@ -297,8 +316,47 @@ export function InterviewSession() {
       sessionStorage.setItem('interviewFeedback', JSON.stringify(basicFeedback));
       sessionStorage.setItem('interviewMessages', JSON.stringify(messages));
       navigate('/interview/results');
-    } finally {
-      setIsEndingInterview(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (inputMode === 'code') {
+      // In code mode, allow Enter for line breaks
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const textarea = e.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const value = textarea.value;
+        const newValue = value.substring(0, start) + '\n' + value.substring(end);
+        setCurrentInput(newValue);
+        
+        // Set cursor position after the new line
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+        }, 0);
+      }
+      // Handle tab for indentation
+      else if (e.key === 'Tab') {
+        e.preventDefault();
+        const textarea = e.currentTarget;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const value = textarea.value;
+        const newValue = value.substring(0, start) + '  ' + value.substring(end);
+        setCurrentInput(newValue);
+        
+        // Set cursor position after the tab
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 2;
+        }, 0);
+      }
+    } else {
+      // In text mode, Enter submits (unless Shift+Enter)
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage(currentInput);
+      }
     }
   };
 
@@ -335,6 +393,7 @@ export function InterviewSession() {
                   onClick={endInterview} 
                   loading={isEndingInterview}
                   disabled={isEndingInterview}
+                  className="min-w-[120px]"
                 >
                   <Square className="h-4 w-4 mr-2" />
                   {isEndingInterview ? 'Ending...' : 'End Interview'}
@@ -387,7 +446,7 @@ export function InterviewSession() {
                           {message.type === 'user' ? 'You' : 'AI Interviewer'}
                         </span>
                       </div>
-                      <p className="text-sm">{message.content}</p>
+                      <pre className="text-sm whitespace-pre-wrap font-sans">{message.content}</pre>
                     </div>
                   </div>
                 ))}
@@ -410,54 +469,87 @@ export function InterviewSession() {
           {/* Input Area */}
           {sessionStarted && (
             <div className="border-t border-gray-200 p-4">
-              <div className="flex items-center space-x-2">
-                {config.interactionMode === 'voice' ? (
-                  <>
-                    <Button
-                      variant={isListening ? 'danger' : 'primary'}
-                      onClick={isListening ? stopListening : startListening}
-                      disabled={isLoading || isSpeaking || isEndingInterview}
-                      className="flex-shrink-0"
-                    >
-                      {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    </Button>
-                    <input
-                      type="text"
-                      value={currentInput}
-                      onChange={(e) => setCurrentInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(currentInput)}
-                      placeholder={isListening ? 'Listening...' : 'Speak or type your answer'}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={isLoading || isEndingInterview}
-                    />
-                    <Button
-                      variant={isSpeaking ? 'danger' : 'ghost'}
-                      onClick={toggleSpeaking}
-                      className="flex-shrink-0"
-                      disabled={isEndingInterview}
-                    >
-                      {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                    </Button>
-                  </>
-                ) : (
-                  <input
-                    type="text"
+              {/* Input Mode Toggle */}
+              <div className="flex items-center space-x-2 mb-3">
+                <Button
+                  variant={inputMode === 'text' ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setInputMode('text')}
+                  disabled={isEndingInterview}
+                >
+                  <Type className="h-4 w-4 mr-1" />
+                  Text
+                </Button>
+                <Button
+                  variant={inputMode === 'code' ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={() => setInputMode('code')}
+                  disabled={isEndingInterview}
+                >
+                  <Code className="h-4 w-4 mr-1" />
+                  Code
+                </Button>
+              </div>
+
+              <div className="flex items-end space-x-2">
+                {config.interactionMode === 'voice' && (
+                  <Button
+                    variant={isListening ? 'danger' : 'primary'}
+                    onClick={isListening ? stopListening : startListening}
+                    disabled={isLoading || isSpeaking || isEndingInterview}
+                    className="flex-shrink-0 mb-1"
+                  >
+                    {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </Button>
+                )}
+                
+                <div className="flex-1">
+                  <textarea
+                    ref={textareaRef}
                     value={currentInput}
                     onChange={(e) => setCurrentInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(currentInput)}
-                    placeholder="Type your answer here..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onKeyDown={handleKeyDown}
+                    placeholder={
+                      inputMode === 'code' 
+                        ? 'Write your code here... (Enter for new line, click Send to submit)'
+                        : isListening 
+                          ? 'Listening...' 
+                          : 'Type your answer here... (Enter to send, Shift+Enter for new line)'
+                    }
+                    className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
+                      inputMode === 'code' ? 'font-mono text-sm' : ''
+                    }`}
+                    rows={inputMode === 'code' ? 4 : 1}
                     disabled={isLoading || isEndingInterview}
+                    style={{ minHeight: inputMode === 'code' ? '100px' : '40px' }}
                   />
+                </div>
+
+                {config.interactionMode === 'voice' && (
+                  <Button
+                    variant={isSpeaking ? 'danger' : 'ghost'}
+                    onClick={toggleSpeaking}
+                    className="flex-shrink-0 mb-1"
+                    disabled={isEndingInterview}
+                  >
+                    {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                  </Button>
                 )}
+
                 <Button
                   onClick={() => handleSendMessage(currentInput)}
                   disabled={!currentInput.trim() || isLoading || isEndingInterview}
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 mb-1"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
+              
+              {inputMode === 'code' && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Use Tab for indentation, Enter for new lines. Click Send button to submit your code.
+                </p>
+              )}
             </div>
           )}
         </Card>
@@ -473,6 +565,9 @@ export function InterviewSession() {
               <li>• Stay calm and confident</li>
               {config.interactionMode === 'voice' && (
                 <li>• Speak clearly and at a moderate pace</li>
+              )}
+              {inputMode === 'code' && (
+                <li>• Use proper code formatting and explain your thought process</li>
               )}
             </ul>
           </Card>
