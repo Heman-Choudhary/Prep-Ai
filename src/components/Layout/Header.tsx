@@ -12,13 +12,15 @@ export function Header() {
   const handleSignOut = async () => {
     try {
       console.log('Header: Starting sign out...');
+      setIsMenuOpen(false); // Close mobile menu first
       await signOut();
       console.log('Header: Sign out completed, navigating to home...');
-      navigate('/');
+      // Use replace to prevent back navigation issues
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Header: Sign out error:', error);
       // Force navigation even on error
-      navigate('/');
+      navigate('/', { replace: true });
     }
   };
 
@@ -128,10 +130,7 @@ export function Header() {
                   Dashboard
                 </Link>
                 <button 
-                  onClick={() => {
-                    handleSignOut();
-                    setIsMenuOpen(false);
-                  }}
+                  onClick={handleSignOut}
                   disabled={loading}
                   className="block w-full text-left px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md disabled:opacity-50"
                 >

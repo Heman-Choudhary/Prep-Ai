@@ -169,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       console.log('Starting sign out process...');
+      setLoading(true);
       
       // Clear all user data first
       clearUserData();
@@ -192,6 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setUser(null);
       clearUserData();
+    } finally {
+      setLoading(false);
     }
   };
 
