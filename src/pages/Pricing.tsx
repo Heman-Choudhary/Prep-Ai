@@ -151,7 +151,7 @@ export function Pricing() {
                   <span className="text-gray-600">/month</span>
                 </div>
                 <Link to="/contact">
-                  <Button variant="secondary" className="w-full" size="lg">
+                  <Button variant="outline" className="w-full" size="lg">
                     Contact Sales
                   </Button>
                 </Link>
@@ -328,7 +328,7 @@ export function Pricing() {
               </Button>
             </Link>
             <Link to="/contact">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto border-white text-white hover:bg-white hover:text-blue-600 text-lg px-8 py-4">
+              <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-4 border border-white">
                 Contact Sales
               </Button>
             </Link>

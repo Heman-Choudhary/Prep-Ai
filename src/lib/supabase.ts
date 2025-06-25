@@ -4,16 +4,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found. Please connect to Supabase.');
+  console.warn('Supabase credentials not found. Please check your environment variables.');
 }
 
-// Use valid placeholder URLs to prevent initialization errors
-const defaultUrl = 'https://placeholder.supabase.co';
-const defaultKey = 'placeholder-key';
-
 export const supabase = createClient(
-  supabaseUrl || defaultUrl, 
-  supabaseAnonKey || defaultKey
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
 );
 
 export type Database = {

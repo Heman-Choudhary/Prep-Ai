@@ -19,7 +19,7 @@ export function InterviewSetup() {
     role: '',
     experienceLevel: '',
     interviewType: '',
-    difficulty: 50, // Changed to number for slider
+    difficulty: 50, // Slider value (0-100)
     duration: 30,
     interactionMode: 'voice'
   });
@@ -55,8 +55,8 @@ export function InterviewSetup() {
 
   // Convert slider value to difficulty string for backend
   const getDifficultyString = (value: number) => {
-    if (value <= 34) return 'easy';
-    if (value <= 64) return 'medium';
+    if (value < 35) return 'easy';
+    if (value >= 35 && value < 65) return 'medium';
     return 'hard';
   };
 
