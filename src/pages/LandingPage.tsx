@@ -43,19 +43,19 @@ const LandingPage: React.FC = () => {
 
   const testimonials = [
     {
-      name: 'Sarah Chen',
+      name: 'Ranchoddas Shamaldas Chanchad',
       role: 'Software Engineer at Google',
       content: 'PrepAI helped me land my dream job! The AI feedback was incredibly detailed and helped me improve my communication skills.',
       rating: 5,
     },
     {
-      name: 'Michael Rodriguez',
+      name: 'Farhan',
       role: 'Product Manager at Microsoft',
       content: 'The role-specific questions were spot-on. I felt completely prepared for my actual interviews.',
       rating: 5,
     },
     {
-      name: 'Emily Johnson',
+      name: 'Raju Rastogi',
       role: 'Data Scientist at Netflix',
       content: 'Amazing platform! The analytics helped me identify my weak points and track my improvement over time.',
       rating: 5,

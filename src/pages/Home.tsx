@@ -232,7 +232,7 @@ export function Home() {
                   <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">Sarah Chen</div>
+                  <div className="font-semibold text-gray-900">Ranchoddas Shamaldas Chanchad</div>
                   <div className="text-gray-600 text-sm">Software Engineer at Google</div>
                 </div>
               </div>
@@ -253,7 +253,7 @@ export function Home() {
                   <Users className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">Michael Rodriguez</div>
+                  <div className="font-semibold text-gray-900">Farhan</div>
                   <div className="text-gray-600 text-sm">Product Manager at Meta</div>
                 </div>
               </div>
@@ -274,7 +274,7 @@ export function Home() {
                   <Users className="h-5 w-5 text-emerald-600" />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-900">Emily Johnson</div>
+                  <div className="font-semibold text-gray-900">Raju Rastogi</div>
                   <div className="text-gray-600 text-sm">Data Scientist at Amazon</div>
                 </div>
               </div>

@@ -110,7 +110,7 @@ const Register: React.FC = () => {
                   "PrepAI helped me prepare for my Google interview. The AI feedback was incredibly detailed!"
                 </p>
                 <p className="text-sm font-semibold text-gray-900 mt-2">
-                  Sarah Chen, Software Engineer at Google
+                  Ranchoddas Shamaldas Chanchad, Software Engineer at Google
                 </p>
               </div>
             </div>
