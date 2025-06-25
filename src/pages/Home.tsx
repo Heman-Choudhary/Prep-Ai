@@ -296,7 +296,7 @@ export function Home() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">
-              <Button size="lg" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-4">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto border-white text-white hover:bg-white hover:text-blue-600 text-lg px-8 py-4">
                 Get Started Free
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
