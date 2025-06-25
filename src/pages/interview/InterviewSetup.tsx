@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { DifficultySlider } from '../../components/ui/DifficultySlider';
 
 export function InterviewSetup() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export function InterviewSetup() {
     role: '',
     experienceLevel: '',
     interviewType: '',
-    difficulty: 'medium',
+    difficulty: 50, // Changed to number for slider
     duration: 30,
     interactionMode: 'voice'
   });
@@ -50,17 +51,22 @@ export function InterviewSetup() {
     { value: 'mixed', label: 'Mixed Interview', description: 'Combination of technical and behavioral' }
   ];
 
-  const difficulties = [
-    { value: 'easy', label: 'Easy', description: 'Basic questions, gentle pace' },
-    { value: 'medium', label: 'Medium', description: 'Standard difficulty, realistic pace' },
-    { value: 'hard', label: 'Hard', description: 'Challenging questions, fast pace' }
-  ];
-
   const durations = [15, 30, 45];
+
+  // Convert slider value to difficulty string for backend
+  const getDifficultyString = (value: number) => {
+    if (value <= 34) return 'easy';
+    if (value <= 64) return 'medium';
+    return 'hard';
+  };
 
   const handleStartInterview = () => {
     // Store config in sessionStorage for the interview session
-    sessionStorage.setItem('interviewConfig', JSON.stringify(config));
+    const configWithStringDifficulty = {
+      ...config,
+      difficulty: getDifficultyString(config.difficulty)
+    };
+    sessionStorage.setItem('interviewConfig', JSON.stringify(configWithStringDifficulty));
     navigate('/interview/session');
   };
 
@@ -70,16 +76,16 @@ export function InterviewSetup() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-8">
+        <header className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Configure Your Interview
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Customize your practice session to match your target role and experience level
           </p>
-        </div>
+        </header>
 
-        <div className="space-y-8">
+        <main className="space-y-8">
           {/* Role Selection */}
           <Card>
             <div className="flex items-center mb-6">
@@ -97,11 +103,12 @@ export function InterviewSetup() {
                 <button
                   key={role}
                   onClick={() => setConfig({ ...config, role })}
-                  className={`p-4 text-left border rounded-lg transition-all duration-200 ${
+                  className={`p-4 text-left border rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     config.role === role
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
+                  aria-pressed={config.role === role}
                 >
                   {role}
                 </button>
@@ -126,11 +133,12 @@ export function InterviewSetup() {
                 <button
                   key={level.value}
                   onClick={() => setConfig({ ...config, experienceLevel: level.value })}
-                  className={`p-4 text-left border rounded-lg transition-all duration-200 ${
+                  className={`p-4 text-left border rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                     config.experienceLevel === level.value
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
+                  aria-pressed={config.experienceLevel === level.value}
                 >
                   <div className="font-medium">{level.label}</div>
                 </button>
@@ -155,11 +163,12 @@ export function InterviewSetup() {
                 <button
                   key={type.value}
                   onClick={() => setConfig({ ...config, interviewType: type.value })}
-                  className={`p-4 text-left border rounded-lg transition-all duration-200 ${
+                  className={`p-4 text-left border rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                     config.interviewType === type.value
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-md'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
+                  aria-pressed={config.interviewType === type.value}
                 >
                   <div className="font-medium mb-1">{type.label}</div>
                   <div className="text-sm text-gray-600">{type.description}</div>
@@ -180,29 +189,12 @@ export function InterviewSetup() {
               </div>
             </div>
             
-            <div className="space-y-6">
-              {/* Difficulty */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Difficulty Level
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {difficulties.map((diff) => (
-                    <button
-                      key={diff.value}
-                      onClick={() => setConfig({ ...config, difficulty: diff.value })}
-                      className={`p-3 text-left border rounded-lg transition-all duration-200 ${
-                        config.difficulty === diff.value
-                          ? 'border-orange-500 bg-orange-50 text-orange-700'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="font-medium mb-1">{diff.label}</div>
-                      <div className="text-sm text-gray-600">{diff.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="space-y-8">
+              {/* Enhanced Difficulty Slider */}
+              <DifficultySlider
+                value={config.difficulty}
+                onChange={(value) => setConfig({ ...config, difficulty: value })}
+              />
 
               {/* Duration */}
               <div>
@@ -214,11 +206,12 @@ export function InterviewSetup() {
                     <button
                       key={duration}
                       onClick={() => setConfig({ ...config, duration })}
-                      className={`flex items-center px-4 py-3 border rounded-lg transition-all duration-200 ${
+                      className={`flex items-center px-4 py-3 border rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         config.duration === duration
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
+                      aria-pressed={config.duration === duration}
                     >
                       <Clock className="h-4 w-4 mr-2" />
                       {duration} min
@@ -235,11 +228,12 @@ export function InterviewSetup() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <button
                     onClick={() => setConfig({ ...config, interactionMode: 'voice' })}
-                    className={`flex items-center p-4 border rounded-lg transition-all duration-200 ${
+                    className={`flex items-center p-4 border rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       config.interactionMode === 'voice'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
+                    aria-pressed={config.interactionMode === 'voice'}
                   >
                     <Mic className="h-5 w-5 mr-3" />
                     <div className="text-left">
@@ -250,11 +244,12 @@ export function InterviewSetup() {
                   
                   <button
                     onClick={() => setConfig({ ...config, interactionMode: 'text' })}
-                    className={`flex items-center p-4 border rounded-lg transition-all duration-200 ${
+                    className={`flex items-center p-4 border rounded-lg transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       config.interactionMode === 'text'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
+                    aria-pressed={config.interactionMode === 'text'}
                   >
                     <MessageSquare className="h-5 w-5 mr-3" />
                     <div className="text-left">
@@ -273,7 +268,7 @@ export function InterviewSetup() {
               onClick={handleStartInterview}
               disabled={!isConfigComplete}
               size="lg"
-              className="px-8 py-4 text-lg"
+              className="px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-200"
             >
               Start Interview Session
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -285,7 +280,7 @@ export function InterviewSetup() {
               </p>
             )}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

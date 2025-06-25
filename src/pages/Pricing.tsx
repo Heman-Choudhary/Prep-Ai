@@ -34,18 +34,18 @@ export function Pricing() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
             
-            {/* Free Plan */}
+            {/* Basic Plan */}
             <Card className="relative border-2 border-gray-200 hover:shadow-lg transition-all duration-300">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Free Starter</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Basic</h3>
                 <p className="text-gray-600 mb-6">Perfect for trying out PrepAI</p>
                 <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">$0</span>
+                  <span className="text-4xl font-bold text-gray-900">₹100</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <Link to="/signup">
                   <Button variant="outline" className="w-full" size="lg">
-                    Get Started Free
+                    Get Started
                   </Button>
                 </Link>
               </div>
@@ -53,7 +53,7 @@ export function Pricing() {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700">3 practice interviews per month</span>
+                  <span className="text-gray-700">5 practice interviews per month</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
@@ -69,7 +69,7 @@ export function Pricing() {
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700">5 job roles supported</span>
+                  <span className="text-gray-700">10 job roles supported</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
@@ -78,7 +78,7 @@ export function Pricing() {
               </div>
             </Card>
 
-            {/* Pro Plan */}
+            {/* Premium Plan */}
             <Card className="relative border-2 border-blue-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                 <div className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center">
@@ -88,15 +88,15 @@ export function Pricing() {
               </div>
               
               <div className="text-center mb-8 mt-4">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Pro</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Premium</h3>
                 <p className="text-gray-600 mb-6">For serious interview preparation</p>
                 <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">$29</span>
+                  <span className="text-4xl font-bold text-gray-900">₹500</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <Link to="/signup">
                   <Button className="w-full" size="lg">
-                    Start Pro Trial
+                    Start Premium Trial
                   </Button>
                 </Link>
               </div>
@@ -134,6 +134,10 @@ export function Pricing() {
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
                   <span className="text-gray-700">Priority support</span>
                 </div>
+                <div className="flex items-center">
+                  <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                  <span className="text-gray-700">Code editor for technical interviews</span>
+                </div>
               </div>
             </Card>
 
@@ -143,7 +147,7 @@ export function Pricing() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
                 <p className="text-gray-600 mb-6">For teams and organizations</p>
                 <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">$99</span>
+                  <span className="text-4xl font-bold text-gray-900">₹1,000</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <Link to="/contact">
@@ -156,7 +160,7 @@ export function Pricing() {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
-                  <span className="text-gray-700">Everything in Pro</span>
+                  <span className="text-gray-700">Everything in Premium</span>
                 </div>
                 <div className="flex items-center">
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
@@ -186,14 +190,56 @@ export function Pricing() {
                   <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
                   <span className="text-gray-700">24/7 phone support</span>
                 </div>
+                <div className="flex items-center">
+                  <Check className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                  <span className="text-gray-700">Stripe payment integration</span>
+                </div>
               </div>
             </Card>
           </div>
         </div>
       </section>
 
+      {/* Payment Methods */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8">Secure Payment Options</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="text-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-blue-600 font-bold">₹</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Indian Rupees</h3>
+              <p className="text-gray-600 text-sm">
+                All prices in INR with local payment methods supported
+              </p>
+            </Card>
+
+            <Card className="text-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-purple-600 font-bold">🔒</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Secure Payments</h3>
+              <p className="text-gray-600 text-sm">
+                Powered by Stripe with bank-level security and encryption
+              </p>
+            </Card>
+
+            <Card className="text-center">
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-emerald-600 font-bold">📱</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Multiple Methods</h3>
+              <p className="text-gray-600 text-sm">
+                UPI, Cards, Net Banking, and Wallets accepted
+              </p>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
@@ -216,7 +262,7 @@ export function Pricing() {
                 Is there a free trial for paid plans?
               </h3>
               <p className="text-gray-600">
-                Yes, we offer a 7-day free trial for the Pro plan. No credit card required to start. 
+                Yes, we offer a 7-day free trial for the Premium plan. No credit card required to start. 
                 You can cancel anytime during the trial with no charges.
               </p>
             </Card>
@@ -226,8 +272,8 @@ export function Pricing() {
                 What payment methods do you accept?
               </h3>
               <p className="text-gray-600">
-                We accept all major credit cards (Visa, MasterCard, American Express) and PayPal. 
-                Enterprise customers can also pay via bank transfer.
+                We accept UPI, all major credit/debit cards, net banking, and popular digital wallets. 
+                All payments are processed securely through Stripe with Indian Rupee support.
               </p>
             </Card>
 
@@ -250,6 +296,16 @@ export function Pricing() {
                 You'll continue to have access until the end of your current billing period.
               </p>
             </Card>
+
+            <Card>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Do you offer refunds?
+              </h3>
+              <p className="text-gray-600">
+                We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied 
+                with PrepAI, contact us within 30 days for a full refund.
+              </p>
+            </Card>
           </div>
         </div>
       </section>
@@ -262,7 +318,7 @@ export function Pricing() {
           </h2>
           <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
             Join thousands of professionals who have improved their interview skills with PrepAI. 
-            Start your free trial today.
+            Start your journey today with our affordable Indian pricing.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

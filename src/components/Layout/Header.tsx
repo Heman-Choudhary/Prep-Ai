@@ -6,12 +6,20 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      console.log('Header: Starting sign out...');
+      await signOut();
+      console.log('Header: Sign out completed, navigating to home...');
+      navigate('/');
+    } catch (error) {
+      console.error('Header: Sign out error:', error);
+      // Force navigation even on error
+      navigate('/');
+    }
   };
 
   return (
@@ -55,6 +63,7 @@ export function Header() {
                   variant="ghost" 
                   size="sm" 
                   onClick={handleSignOut}
+                  loading={loading}
                   className="flex items-center space-x-2"
                 >
                   <LogOut className="h-4 w-4" />
@@ -123,9 +132,10 @@ export function Header() {
                     handleSignOut();
                     setIsMenuOpen(false);
                   }}
-                  className="block w-full text-left px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md"
+                  disabled={loading}
+                  className="block w-full text-left px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md disabled:opacity-50"
                 >
-                  Sign Out
+                  {loading ? 'Signing out...' : 'Sign Out'}
                 </button>
               </div>
             ) : (

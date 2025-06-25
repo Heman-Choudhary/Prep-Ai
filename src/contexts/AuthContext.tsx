@@ -88,10 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Clear any cached data on sign out
         if (event === 'SIGNED_OUT') {
-          // Clear session storage
-          sessionStorage.clear();
-          // Clear any other cached data
-          localStorage.removeItem('supabase.auth.token');
+          clearUserData();
         }
         
         setLoading(false);
@@ -103,6 +100,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  const clearUserData = () => {
+    // Clear session storage
+    try {
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('Could not clear session storage:', e);
+    }
+    
+    // Clear specific localStorage items
+    try {
+      const keysToRemove = [
+        'supabase.auth.token',
+        'sb-localhost-auth-token',
+        'interviewFeedback',
+        'interviewMessages',
+        'interviewConfig'
+      ];
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
+    } catch (e) {
+      console.warn('Could not clear localStorage:', e);
+    }
+  };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
@@ -145,33 +168,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      setLoading(true);
+      console.log('Starting sign out process...');
       
-      // Clear all session data first
-      sessionStorage.clear();
-      localStorage.removeItem('supabase.auth.token');
+      // Clear all user data first
+      clearUserData();
       
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error('Sign out error:', error);
+        console.error('Supabase sign out error:', error);
       }
       
-      // Force clear the state regardless of error
+      // Force clear the state
       setSession(null);
       setUser(null);
       
-      // Reload the page to ensure clean state
-      window.location.href = '/';
+      console.log('Sign out completed successfully');
+      
     } catch (error) {
       console.error('Sign out error:', error);
-      // Force clear state even on error
+      // Force clear state and data even on error
       setSession(null);
       setUser(null);
-      window.location.href = '/';
-    } finally {
-      setLoading(false);
+      clearUserData();
     }
   };
 

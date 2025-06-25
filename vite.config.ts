@@ -14,14 +14,28 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           ui: ['lucide-react'],
+          ai: ['@google/generative-ai'],
+          supabase: ['@supabase/supabase-js'],
         },
       },
     },
     chunkSizeWarningLimit: 1000,
+    target: 'esnext',
+    minify: 'esbuild',
+    sourcemap: false,
   },
   server: {
     hmr: {
       overlay: false,
     },
+    host: true,
+    port: 5173,
+  },
+  preview: {
+    port: 4173,
+    host: true,
+  },
+  esbuild: {
+    drop: ['console', 'debugger'],
   },
 });

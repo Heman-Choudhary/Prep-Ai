@@ -13,7 +13,9 @@ import {
   User,
   Bot,
   Code,
-  Type
+  Type,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -47,10 +49,13 @@ export function InterviewSession() {
   const [interviewId, setInterviewId] = useState<string | null>(null);
   const [isEndingInterview, setIsEndingInterview] = useState(false);
   const [inputMode, setInputMode] = useState<'text' | 'code'>('text');
+  const [showEndConfirmation, setShowEndConfirmation] = useState(false);
+  const [endingProgress, setEndingProgress] = useState('');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const endInterviewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Load config from sessionStorage
@@ -63,7 +68,7 @@ export function InterviewSession() {
       navigate('/interview/setup');
     }
 
-    // Initialize speech service with better voice selection
+    // Initialize speech service with optimal voice
     setTimeout(() => {
       speechService.initializeOptimalVoice();
     }, 1000);
@@ -81,6 +86,10 @@ export function InterviewSession() {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (endInterviewTimeoutRef.current) {
+      clearTimeout(endInterviewTimeoutRef.current);
+      endInterviewTimeoutRef.current = null;
     }
     speechService.stopSpeaking();
     speechService.stopListening();
@@ -205,7 +214,7 @@ export function InterviewSession() {
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Speak the response if voice mode is enabled
+      // Speak the response if voice mode is enabled and not ending
       if (config?.interactionMode === 'voice' && !isEndingInterview) {
         setIsSpeaking(true);
         try {
@@ -254,75 +263,122 @@ export function InterviewSession() {
     }
   };
 
+  const confirmEndInterview = () => {
+    setShowEndConfirmation(true);
+  };
+
+  const cancelEndInterview = () => {
+    setShowEndConfirmation(false);
+  };
+
   const endInterview = async () => {
-    if (!interviewer || isEndingInterview) return;
+    if (isEndingInterview) return;
 
     console.log('Starting interview end process...');
     setIsEndingInterview(true);
+    setShowEndConfirmation(false);
+    setEndingProgress('Stopping interview session...');
     
+    // Set a timeout to force navigation if something goes wrong
+    endInterviewTimeoutRef.current = setTimeout(() => {
+      console.log('Forcing navigation due to timeout...');
+      forceEndInterview();
+    }, 15000); // 15 second timeout
+
     try {
       // Stop all ongoing activities immediately
       cleanup();
       
+      setEndingProgress('Generating performance feedback...');
       console.log('Generating feedback...');
-      const feedback = await interviewer.generateFeedback();
-      const interviewData = interviewer.getInterviewData();
+      let feedback;
+      
+      if (interviewer) {
+        try {
+          feedback = await interviewer.generateFeedback();
+          const interviewData = interviewer.getInterviewData();
 
-      // Update interview record with results if we have an ID
-      if (interviewId) {
-        console.log('Updating interview record...');
-        const { error } = await supabase
-          .from('interviews')
-          .update({
-            score: feedback.overallScore,
-            feedback: feedback.feedback,
-            questions: interviewData.questions,
-            responses: interviewData.responses,
-            completed_at: new Date().toISOString()
-          })
-          .eq('id', interviewId);
+          setEndingProgress('Saving interview results...');
 
-        if (error) {
-          console.error('Error updating interview record:', error);
+          // Update interview record with results if we have an ID
+          if (interviewId) {
+            console.log('Updating interview record...');
+            const { error } = await supabase
+              .from('interviews')
+              .update({
+                score: feedback.overallScore,
+                feedback: feedback.feedback,
+                questions: interviewData.questions,
+                responses: interviewData.responses,
+                completed_at: new Date().toISOString()
+              })
+              .eq('id', interviewId);
+
+            if (error) {
+              console.error('Error updating interview record:', error);
+            }
+          }
+        } catch (feedbackError) {
+          console.error('Error generating feedback:', feedbackError);
+          feedback = getBasicFeedback();
         }
+      } else {
+        feedback = getBasicFeedback();
       }
+
+      setEndingProgress('Preparing results...');
 
       // Store feedback in sessionStorage for results page
       sessionStorage.setItem('interviewFeedback', JSON.stringify(feedback));
       sessionStorage.setItem('interviewMessages', JSON.stringify(messages));
       
+      // Clear the timeout since we're navigating successfully
+      if (endInterviewTimeoutRef.current) {
+        clearTimeout(endInterviewTimeoutRef.current);
+        endInterviewTimeoutRef.current = null;
+      }
+      
       console.log('Navigating to results...');
       navigate('/interview/results');
     } catch (error) {
       console.error('Error ending interview:', error);
-      
-      // Provide basic feedback even if there's an error
-      const basicFeedback = {
-        overallScore: 75,
-        breakdown: {
-          technical: 75,
-          communication: 80,
-          problemSolving: 70,
-          cultural: 80,
-        },
-        feedback: "Interview completed successfully. Thank you for practicing with PrepAI!",
-        recommendations: [
-          "Continue practicing regularly to improve your skills",
-          "Focus on providing specific examples in your answers",
-          "Work on clear and confident communication"
-        ]
-      };
-      
-      sessionStorage.setItem('interviewFeedback', JSON.stringify(basicFeedback));
-      sessionStorage.setItem('interviewMessages', JSON.stringify(messages));
-      navigate('/interview/results');
+      forceEndInterview();
     }
   };
 
+  const getBasicFeedback = () => ({
+    overallScore: 75,
+    breakdown: {
+      technical: 75,
+      communication: 80,
+      problemSolving: 70,
+      cultural: 80,
+    },
+    feedback: "Interview completed successfully. Thank you for practicing with PrepAI!",
+    recommendations: [
+      "Continue practicing regularly to improve your skills",
+      "Focus on providing specific examples in your answers",
+      "Work on clear and confident communication"
+    ]
+  });
+
+  const forceEndInterview = () => {
+    console.log('Force ending interview...');
+    const basicFeedback = getBasicFeedback();
+    
+    sessionStorage.setItem('interviewFeedback', JSON.stringify(basicFeedback));
+    sessionStorage.setItem('interviewMessages', JSON.stringify(messages));
+    
+    // Force navigation
+    window.location.href = '/interview/results';
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isEndingInterview) return;
+
     if (inputMode === 'code') {
-      // In code mode, allow Enter for line breaks
-      if (e.key === 'Enter' && !e.shiftKey) {
+      // In code mode, Enter creates new line, Shift+Enter or Ctrl+Enter submits
+      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
         e.preventDefault();
         const textarea = e.currentTarget;
         const start = textarea.selectionStart;
@@ -335,6 +391,11 @@ export function InterviewSession() {
         setTimeout(() => {
           textarea.selectionStart = textarea.selectionEnd = start + 1;
         }, 0);
+      }
+      // Shift+Enter or Ctrl+Enter submits in code mode
+      else if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey)) {
+        e.preventDefault();
+        handleSendMessage(currentInput);
       }
       // Handle tab for indentation
       else if (e.key === 'Tab') {
@@ -352,7 +413,7 @@ export function InterviewSession() {
         }, 0);
       }
     } else {
-      // In text mode, Enter submits (unless Shift+Enter)
+      // In text mode, Enter submits (unless Shift+Enter for new line)
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSendMessage(currentInput);
@@ -390,18 +451,70 @@ export function InterviewSession() {
               {sessionStarted && (
                 <Button 
                   variant="danger" 
-                  onClick={endInterview} 
-                  loading={isEndingInterview}
+                  onClick={confirmEndInterview} 
                   disabled={isEndingInterview}
-                  className="min-w-[120px]"
+                  className="min-w-[140px] relative"
                 >
-                  <Square className="h-4 w-4 mr-2" />
-                  {isEndingInterview ? 'Ending...' : 'End Interview'}
+                  {isEndingInterview ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      Ending...
+                    </>
+                  ) : (
+                    <>
+                      <Square className="h-4 w-4 mr-2" />
+                      End Interview
+                    </>
+                  )}
                 </Button>
               )}
             </div>
           </div>
+          
+          {/* Status indicator */}
+          {isEndingInterview && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center">
+              <LoadingSpinner size="sm" className="mr-3" />
+              <span className="text-blue-800">{endingProgress}</span>
+            </div>
+          )}
         </Card>
+
+        {/* End Interview Confirmation Modal */}
+        {showEndConfirmation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <Card className="max-w-md w-full mx-4">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="h-8 w-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  End Interview Session?
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to end this interview? Your responses will be analyzed 
+                  and you'll receive detailed feedback.
+                </p>
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={cancelEndInterview}
+                    className="flex-1"
+                  >
+                    Continue Interview
+                  </Button>
+                  <Button 
+                    variant="danger" 
+                    onClick={endInterview}
+                    className="flex-1"
+                  >
+                    End & Get Feedback
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Chat Interface */}
         <Card className="h-96 flex flex-col">
@@ -467,28 +580,37 @@ export function InterviewSession() {
           </div>
 
           {/* Input Area */}
-          {sessionStarted && (
+          {sessionStarted && !isEndingInterview && (
             <div className="border-t border-gray-200 p-4">
               {/* Input Mode Toggle */}
-              <div className="flex items-center space-x-2 mb-3">
-                <Button
-                  variant={inputMode === 'text' ? 'primary' : 'outline'}
-                  size="sm"
-                  onClick={() => setInputMode('text')}
-                  disabled={isEndingInterview}
-                >
-                  <Type className="h-4 w-4 mr-1" />
-                  Text
-                </Button>
-                <Button
-                  variant={inputMode === 'code' ? 'primary' : 'outline'}
-                  size="sm"
-                  onClick={() => setInputMode('code')}
-                  disabled={isEndingInterview}
-                >
-                  <Code className="h-4 w-4 mr-1" />
-                  Code
-                </Button>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={inputMode === 'text' ? 'primary' : 'outline'}
+                    size="sm"
+                    onClick={() => setInputMode('text')}
+                    disabled={isEndingInterview}
+                  >
+                    <Type className="h-4 w-4 mr-1" />
+                    Text
+                  </Button>
+                  <Button
+                    variant={inputMode === 'code' ? 'primary' : 'outline'}
+                    size="sm"
+                    onClick={() => setInputMode('code')}
+                    disabled={isEndingInterview}
+                  >
+                    <Code className="h-4 w-4 mr-1" />
+                    Code
+                  </Button>
+                </div>
+                {inputMode === 'code' && (
+                  <div className="text-xs text-gray-500 flex items-center space-x-4">
+                    <span>Enter: New line</span>
+                    <span>Shift+Enter: Submit</span>
+                    <span>Tab: Indent</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-end space-x-2">
@@ -498,6 +620,7 @@ export function InterviewSession() {
                     onClick={isListening ? stopListening : startListening}
                     disabled={isLoading || isSpeaking || isEndingInterview}
                     className="flex-shrink-0 mb-1"
+                    title={isListening ? 'Stop listening' : 'Start voice input'}
                   >
                     {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                   </Button>
@@ -511,7 +634,7 @@ export function InterviewSession() {
                     onKeyDown={handleKeyDown}
                     placeholder={
                       inputMode === 'code' 
-                        ? 'Write your code here... (Enter for new line, click Send to submit)'
+                        ? 'Write your code here... (Shift+Enter to submit, Tab for indentation)'
                         : isListening 
                           ? 'Listening...' 
                           : 'Type your answer here... (Enter to send, Shift+Enter for new line)'
@@ -519,9 +642,12 @@ export function InterviewSession() {
                     className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none ${
                       inputMode === 'code' ? 'font-mono text-sm' : ''
                     }`}
-                    rows={inputMode === 'code' ? 4 : 1}
+                    rows={inputMode === 'code' ? 6 : 2}
                     disabled={isLoading || isEndingInterview}
-                    style={{ minHeight: inputMode === 'code' ? '100px' : '40px' }}
+                    style={{ 
+                      minHeight: inputMode === 'code' ? '120px' : '60px',
+                      maxHeight: '200px'
+                    }}
                   />
                 </div>
 
@@ -531,6 +657,7 @@ export function InterviewSession() {
                     onClick={toggleSpeaking}
                     className="flex-shrink-0 mb-1"
                     disabled={isEndingInterview}
+                    title={isSpeaking ? 'Stop speaking' : 'Toggle voice output'}
                   >
                     {isSpeaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                   </Button>
@@ -540,22 +667,25 @@ export function InterviewSession() {
                   onClick={() => handleSendMessage(currentInput)}
                   disabled={!currentInput.trim() || isLoading || isEndingInterview}
                   className="flex-shrink-0 mb-1"
+                  title="Send response"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
               
               {inputMode === 'code' && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Use Tab for indentation, Enter for new lines. Click Send button to submit your code.
-                </p>
+                <div className="mt-2 text-xs text-gray-500 space-y-1">
+                  <p>• Use Tab for indentation, Enter for new lines</p>
+                  <p>• Press Shift+Enter or click Send button to submit your code</p>
+                  <p>• Explain your thought process and approach</p>
+                </div>
               )}
             </div>
           )}
         </Card>
 
         {/* Instructions */}
-        {sessionStarted && (
+        {sessionStarted && !isEndingInterview && (
           <Card className="mt-6">
             <h3 className="font-semibold text-gray-900 mb-2">Interview Tips</h3>
             <ul className="text-sm text-gray-600 space-y-1">
