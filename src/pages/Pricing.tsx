@@ -40,7 +40,7 @@ export function Pricing() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Basic</h3>
                 <p className="text-gray-600 mb-6">Perfect for trying out PrepAI</p>
                 <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">₹100</span>
+                  <span className="text-4xl font-bold text-gray-900">₹0</span>
                   <span className="text-gray-600">/month</span>
                 </div>
                 <Link to="/signup">
