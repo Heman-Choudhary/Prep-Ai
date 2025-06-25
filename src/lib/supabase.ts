@@ -7,9 +7,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials not found. Please connect to Supabase.');
 }
 
+// Use valid placeholder URLs to prevent initialization errors
+const defaultUrl = 'https://placeholder.supabase.co';
+const defaultKey = 'placeholder-key';
+
 export const supabase = createClient(
-  supabaseUrl || 'placeholder', 
-  supabaseAnonKey || 'placeholder'
+  supabaseUrl || defaultUrl, 
+  supabaseAnonKey || defaultKey
 );
 
 export type Database = {
