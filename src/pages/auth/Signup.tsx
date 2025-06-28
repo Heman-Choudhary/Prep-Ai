@@ -25,10 +25,6 @@ export function Signup() {
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Clear error when user starts typing
-    if (error) {
-      setError('');
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,7 +50,6 @@ export function Signup() {
       if (error) {
         setError(error.message);
       } else {
-        // User is automatically signed in after successful signup (no email confirmation required)
         navigate('/dashboard');
       }
     } catch (err) {
@@ -253,15 +248,6 @@ export function Signup() {
             </div>
           </div>
         </Card>
-
-        {/* Success Note */}
-        <div className="text-center">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800 text-sm">
-              <strong>Quick Setup:</strong> No email confirmation required! You'll be signed in immediately after creating your account.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
