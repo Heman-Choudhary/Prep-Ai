@@ -39,8 +39,6 @@ export function Login() {
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           setError('These credentials don\'t match our records. Please create an account first using the signup page or use the correct email/password combination for an existing account.');
-        } else if (error.message.includes('Email not confirmed')) {
-          setError('Please check your email and click the confirmation link before signing in.');
         } else {
           setError(error.message);
         }
@@ -197,20 +195,6 @@ export function Login() {
             </div>
           </div>
         </Card>
-
-        {/* Debug info for development */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-yellow-800 text-sm">
-              <strong>Development Note:</strong> If you're getting "Invalid login credentials", make sure you have:
-            </p>
-            <ul className="text-yellow-700 text-sm mt-2 list-disc list-inside">
-              <li>Created an account using the signup page</li>
-              <li>Confirmed your email if email confirmation is enabled</li>
-              <li>Using the correct email and password combination</li>
-            </ul>
-          </div>
-        )}
       </div>
     </div>
   );

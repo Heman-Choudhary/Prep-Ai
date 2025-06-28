@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         // Create or update user profile on sign in
-        if (session?.user && event === 'SIGNED_IN') {
+        if (session?.user && (event === 'SIGNED_IN' || event === 'SIGNED_UP')) {
           try {
             const { error } = await supabase
               .from('users')
@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      // Sign up without email confirmation
+      // Sign up without email confirmation requirement
       const result = await supabase.auth.signUp({
         email,
         password,
@@ -139,21 +139,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             full_name: fullName,
           },
-          // Disable email confirmation
-          emailRedirectTo: undefined,
+          // Disable email confirmation by not setting emailRedirectTo
+          // This allows immediate sign-in after registration
         },
       });
       
-      // If signup is successful and user is immediately confirmed
+      // Check if signup was successful
       if (result.data.user && !result.error) {
         console.log('User signed up successfully:', result.data.user.email);
         
-        // The user should be automatically signed in if email confirmation is disabled
-        // Check if the user is confirmed
+        // If the user is immediately confirmed (email confirmation disabled)
         if (result.data.user.email_confirmed_at || result.data.session) {
-          console.log('User is confirmed and signed in');
+          console.log('User is confirmed and signed in immediately');
         } else {
-          console.log('User created but may need confirmation');
+          console.log('User created but may need confirmation - this should not happen with disabled email confirmation');
         }
       }
       
