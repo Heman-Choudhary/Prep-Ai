@@ -38,7 +38,7 @@ export function Login() {
       
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          setError('Invalid email or password. Please check your credentials and try again.');
+          setError('These credentials don\'t match our records. Please create an account first using the signup page or use the correct email/password combination for an existing account.');
         } else if (error.message.includes('Email not confirmed')) {
           setError('Please check your email and click the confirmation link before signing in.');
         } else {
@@ -81,6 +81,15 @@ export function Login() {
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-red-600 text-sm">{error}</p>
+                {error.includes('create an account first') && (
+                  <div className="mt-3">
+                    <Link to="/signup">
+                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                        Go to Signup Page
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
 
