@@ -16,6 +16,7 @@ import { Dashboard } from './pages/Dashboard';
 import { InterviewSetup } from './pages/interview/InterviewSetup';
 import { InterviewSession } from './pages/interview/InterviewSession';
 import { InterviewResults } from './pages/interview/InterviewResults';
+import { InterviewFeedbackPage } from './pages/interview/InterviewFeedback';
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -170,6 +171,13 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <InterviewResults />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/interview/feedback/:sessionId" element={
+            <ProtectedRoute>
+              <Layout>
+                <InterviewFeedbackPage />
               </Layout>
             </ProtectedRoute>
           } />
