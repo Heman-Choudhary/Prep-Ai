@@ -130,6 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
       setLoading(true);
+      
+      // Sign up without email confirmation
       const result = await supabase.auth.signUp({
         email,
         password,
@@ -137,8 +139,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             full_name: fullName,
           },
+          // Disable email confirmation
+          emailRedirectTo: undefined,
         },
       });
+      
+      // If signup is successful and user is immediately confirmed
+      if (result.data.user && !result.error) {
+        console.log('User signed up successfully:', result.data.user.email);
+        
+        // The user should be automatically signed in if email confirmation is disabled
+        // Check if the user is confirmed
+        if (result.data.user.email_confirmed_at || result.data.session) {
+          console.log('User is confirmed and signed in');
+        } else {
+          console.log('User created but may need confirmation');
+        }
+      }
       
       return { error: result.error };
     } catch (error) {
