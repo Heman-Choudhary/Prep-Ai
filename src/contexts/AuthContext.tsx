@@ -33,10 +33,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const getInitialSession = async () => {
       try {
+        console.log('Getting initial session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
+        } else {
+          console.log('Initial session:', session?.user?.email || 'No session');
         }
         
         if (mounted) {
@@ -58,15 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+      console.log('Auth state changed:', event, session?.user?.email || 'No user');
       
       if (mounted) {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Create or update user profile on sign in
+        // Create or update user profile on sign in/up
         if (session?.user && (event === 'SIGNED_IN' || event === 'SIGNED_UP')) {
           try {
+            console.log('Creating/updating user profile...');
             const { error } = await supabase
               .from('users')
               .upsert({
@@ -80,6 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             if (error && error.code !== 'PGRST116') { // Ignore table not found errors
               console.error('Error creating/updating user profile:', error);
+            } else {
+              console.log('User profile updated successfully');
             }
           } catch (profileError) {
             console.error('Error handling user profile:', profileError);
@@ -88,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Clear any cached data on sign out
         if (event === 'SIGNED_OUT') {
+          console.log('User signed out, clearing data...');
           clearUserData();
         }
         
@@ -129,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
+      console.log('Starting sign up process for:', email);
       setLoading(true);
       
       // Sign up without email confirmation requirement
@@ -140,9 +148,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             full_name: fullName,
           },
           // Disable email confirmation by not setting emailRedirectTo
-          // This allows immediate sign-in after registration
+          emailRedirectTo: undefined,
         },
       });
+      
+      console.log('Sign up result:', result.data.user?.email, 'Error:', result.error?.message);
       
       // Check if signup was successful
       if (result.data.user && !result.error) {
@@ -167,11 +177,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Starting sign in process for:', email);
       setLoading(true);
+      
       const result = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      console.log('Sign in result:', result.data.user?.email, 'Error:', result.error?.message);
       
       return { error: result.error };
     } catch (error) {
@@ -195,6 +209,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('Supabase sign out error:', error);
+      } else {
+        console.log('Successfully signed out from Supabase');
       }
       
       // Force clear the state
