@@ -4,6 +4,8 @@ import { Mail, Lock, Eye, EyeOff, Mic } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../components/ui/Toast';
+import { Info } from "lucide-react";
 
 export function Login() {
   const [formData, setFormData] = useState({
@@ -12,10 +14,10 @@ export function Login() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { error: showError } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -27,18 +29,21 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-
     try {
       const { error } = await signIn(formData.email, formData.password);
-      
       if (error) {
-        setError(error.message);
+        if (error.message.includes('Invalid login credentials')) {
+          showError("These credentials don't match our records. Please verify your email and password, or create a new account if you haven't signed up yet.", "Login Failed");
+        } else if (error.message.includes('Email not confirmed')) {
+          showError("Please check your email and click the confirmation link before signing in.", "Email Not Confirmed");
+        } else {
+          showError(`Login failed: ${error.message}. Please try again or contact support if the issue persists.`, "Login Error");
+        }
       } else {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      showError("An unexpected error occurred. Please try again.", "Unexpected Error");
     } finally {
       setLoading(false);
     }
@@ -68,12 +73,6 @@ export function Login() {
         {/* Form */}
         <Card>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            )}
-
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email address
@@ -178,6 +177,24 @@ export function Login() {
             </div>
           </div>
         </Card>
+
+        {/* Debug info for development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-4 bg-white-50/50 border border-blue-100 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Info className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <p className="text-slate-700 text-[15px] font-medium">
+                    Getting "Invalid login credentials"? Ensure you have:
+                  </p>
+                  <div className="text-slate-600 text-sm space-y-1">
+                    <div>• Created an account and CONFIRMED YOUR EMAIL </div>
+                    <div>• Used the correct email and password combination</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );

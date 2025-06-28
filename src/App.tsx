@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './components/ui/Toast';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
@@ -16,6 +17,7 @@ import { Dashboard } from './pages/Dashboard';
 import { InterviewSetup } from './pages/interview/InterviewSetup';
 import { InterviewSession } from './pages/interview/InterviewSession';
 import { InterviewResults } from './pages/interview/InterviewResults';
+import { InterviewFeedbackPage } from './pages/interview/InterviewFeedback';
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -173,6 +175,13 @@ function AppContent() {
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/interview/feedback/:sessionId" element={
+            <ProtectedRoute>
+              <Layout>
+                <InterviewFeedbackPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
           {/* Catch all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -184,9 +193,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

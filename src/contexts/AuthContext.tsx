@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user && event === 'SIGNED_IN') {
           try {
             const { error } = await supabase
-              .from('profiles')
+              .from('users')
               .upsert({
                 id: session.user.id,
                 email: session.user.email!,
@@ -79,10 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
             
             if (error && error.code !== 'PGRST116') { // Ignore table not found errors
-              console.error('Error creating/updating profile:', error);
+              console.error('Error creating/updating user profile:', error);
             }
           } catch (profileError) {
-            console.error('Error handling profile:', profileError);
+            console.error('Error handling user profile:', profileError);
           }
         }
         
